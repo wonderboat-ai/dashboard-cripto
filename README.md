@@ -1,5 +1,7 @@
 # Dashboard Cripto
 
+**Versão atual: v1.3.0** · Criado por **Wonder BOAT | WonderHUB.AI**
+
 Dashboard estático (HTML/CSS/JS, sem backend) para acompanhar o dossiê cripto diário: preço do BTC, KPIs (funding, Fear & Greed, fluxo de ETF), viés do dia (long/short/neutro) e o dossiê completo em Markdown, navegável por data.
 
 ## Demo
@@ -23,6 +25,16 @@ HTML + CSS + JavaScript vanilla. Gráfico via [Chart.js](https://www.chartjs.org
 
 Baixe o repositório e abra `index.html` diretamente no navegador.
 
+## Histórico de versões
+
+| Versão | Data | Mudanças |
+|---|---|---|
+| v1.3.0 | 2026-08-24 | Rodapé institucional (Wonder BOAT \| WonderHUB.AI) e versionamento visível no app (`APP_VERSION`). |
+| v1.2.1 | 2026-07-23 | Silhuetas de criptomoedas no fundo (₿, Ξ, moeda), candles mais sutis e tolerância a falha do CDN do Chart.js. |
+| v1.2.0 | 2026-07-23 | Tema reativo ao viés do dia (long/short/neutro): cor de destaque, decoração de fundo e gráfico colorido por viés. |
+| v1.1.0 | 2026-07-23 | Tema dark verde-neon (textura de grão, glow, cards escuros). |
+| v1.0.0 | 2026-06 | Dashboard original (tema claro), dossiê por data com KPIs, gráfico e import/export JSON. |
+
 ---
 
-WonderHUB.AI
+**Wonder BOAT | WonderHUB.AI**
