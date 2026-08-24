@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Cripto — Dossiê Completo por Data</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <style>
   :root{
     color-scheme: dark;
@@ -76,7 +75,13 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:14px;}
   .card > h2{font-size:13px;font-weight:800;letter-spacing:.2px;margin-bottom:11px;color:var(--muted);
     text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;}
-  canvas{width:100%!important;max-height:200px;}
+
+  /* gráfico ao vivo (widget TradingView) */
+  .tv-card .tradingview-widget-container{height:460px !important;width:100%;}
+  .tradingview-widget-copyright{font-size:10.5px;color:var(--muted);margin-top:6px;letter-spacing:.3px;}
+  .tradingview-widget-copyright a{color:var(--teal);text-decoration:none;}
+  .tradingview-widget-copyright .trademark{color:var(--muted);}
+  @media(max-width:780px){.tv-card .tradingview-widget-container{height:360px !important;}}
 
   /* dossier full render */
   .lead{background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%), var(--card);
@@ -230,6 +235,43 @@
     <span class="cnt" id="cnt"></span>
   </div>
 
+  <div class="card tv-card">
+    <h2>Gráfico ao vivo — BTC/USDT</h2>
+    <!-- TradingView Widget BEGIN -->
+    <div class="tradingview-widget-container" style="height:100%;width:100%">
+      <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>
+      <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/symbols/BYBIT-BTCUSDT/" rel="noopener nofollow" target="_blank"><span class="blue-text">BTCUSDT chart</span></a><span class="trademark"> by TradingView</span></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+      {
+      "allow_symbol_change": true,
+      "calendar": false,
+      "details": false,
+      "hide_side_toolbar": true,
+      "hide_top_toolbar": false,
+      "hide_legend": false,
+      "hide_volume": false,
+      "hotlist": false,
+      "interval": "D",
+      "locale": "br",
+      "save_image": true,
+      "style": "1",
+      "symbol": "BYBIT:BTCUSDT",
+      "theme": "dark",
+      "timezone": "America/Sao_Paulo",
+      "backgroundColor": "#10160f",
+      "gridColor": "rgba(140, 255, 190, 0.06)",
+      "watchlist": [],
+      "withdateranges": false,
+      "compareSymbols": [],
+      "support_host": "https://www.tradingview.com",
+      "studies": [],
+      "autosize": true
+    }
+      </script>
+    </div>
+    <!-- TradingView Widget END -->
+  </div>
+
   <div id="content"></div>
 
   <footer class="site-footer">
@@ -265,8 +307,8 @@
 </div>
 
 <script>
-const KEY="WH_CRIPTO_DOSSIE_V1", TASK_ID="dossie-cripto-diario", APP_VERSION="1.3.0";
-let data=load(), selDate=null, chart=null;
+const KEY="WH_CRIPTO_DOSSIE_V1", TASK_ID="dossie-cripto-diario", APP_VERSION="1.4.0";
+let data=load(), selDate=null;
 
 function load(){ try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return [];} }
 function save(){ localStorage.setItem(KEY,JSON.stringify(data)); }
@@ -275,13 +317,7 @@ function fmtDate(s){ if(!s)return""; const [y,m,d]=s.split("-"); return `${d}/${
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function sorted(){ return [...data].sort((a,b)=>b.date.localeCompare(a.date)); }
 
-/* ---- mood do dia (long/short/neutro) — pinta tema e gráfico conforme a tendência lida no dossiê ---- */
-function moodRGB(bias){
-  if(bias==="short") return "255,93,117";
-  if(bias==="long") return "60,242,138";
-  if(bias==="neutro") return "242,193,78";
-  return "140,168,158";
-}
+/* ---- mood do dia (long/short/neutro) — pinta o tema conforme a tendência lida no dossiê ---- */
 function applyMood(bias){ document.body.dataset.mood = bias || "neutro"; }
 
 /* ---- mini markdown ---- */
@@ -380,7 +416,6 @@ function renderContent(){
 
   box.innerHTML =
     kpiHtml(e.date) +
-    `<div class="card"><h2>Evolução do preço do BTC <span id="cc"></span></h2><canvas id="priceChart"></canvas></div>` +
     (lead?`<div class="lead">${md(lead).replace('<h3 class="dh"','<div class="title"').replace('</h3>','</div>')}</div>`:"") +
     secHtml +
     `<div class="footerbar">
@@ -394,29 +429,6 @@ function renderContent(){
       data=data.filter(x=>x.date!==e.date); save(); pickDefault(); renderAll();
     }
   };
-  renderChart(e.date);
-}
-
-function renderChart(active){
-  const pts=sorted().filter(e=>e.price).reverse();
-  const cc=document.getElementById("cc"); if(cc) cc.textContent=pts.length?`(${pts.length} pts)`:"";
-  const ctx=document.getElementById("priceChart"); if(!ctx) return;
-  if(typeof Chart==="undefined") return; /* CDN indisponível — dashboard segue funcional sem o gráfico */
-  if(chart) chart.destroy();
-  if(!pts.length){ return; }
-  const activeEntry=pts.find(p=>p.date===active);
-  const lineRGB=moodRGB(activeEntry?activeEntry.bias:null);
-  chart=new Chart(ctx,{type:"line",
-    data:{labels:pts.map(p=>fmtDate(p.date)),
-      datasets:[{label:"BTC US$",data:pts.map(p=>p.price),borderColor:`rgb(${lineRGB})`,
-        backgroundColor:`rgba(${lineRGB},.14)`,fill:true,tension:.25,borderWidth:2,
-        pointRadius:pts.map(p=>p.date===active?6:3),
-        pointBorderWidth:pts.map(p=>p.date===active?2:0),
-        pointBorderColor:pts.map(p=>p.date===active?`rgb(${lineRGB})`:"transparent"),
-        pointBackgroundColor:pts.map(p=>`rgb(${moodRGB(p.bias)})`)}]},
-    options:{responsive:true,plugins:{legend:{display:false}},
-      scales:{y:{ticks:{color:"#8fa89c",callback:v=>"$"+(v/1000).toFixed(0)+"k"},grid:{color:"rgba(255,255,255,.06)"}},
-              x:{ticks:{color:"#8fa89c"},grid:{color:"rgba(255,255,255,.04)"}}}}});
 }
 
 /* ---- navigator ---- */
